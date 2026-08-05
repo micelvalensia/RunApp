@@ -2,11 +2,13 @@ import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createWindow } from './window'
 import { setupIpcHandlers } from './ipc'
+import { initDatabase, closeDatabase } from '../../src/database/db'
+import { runMigrations } from '../../src/database/migrate'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -16,6 +18,20 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // Initialize database and run migrations
+  try {
+    console.log('Initializing database...')
+    initDatabase()
+    console.log('Running migrations...')
+    await runMigrations()
+    console.log('Database setup completed.')
+  } catch (error) {
+    console.error('Failed to initialize database:', error)
+    app.quit()
+    return
+  }
+
 
   // Setup IPC handlers
   setupIpcHandlers()
@@ -34,8 +50,13 @@ app.whenReady().then(() => {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    closeDatabase()
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  closeDatabase()
 })
 
 // In this file you can include the rest of your app's specific main process

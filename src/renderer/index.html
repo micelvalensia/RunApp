@@ -2,41 +2,227 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Electron</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <title>Runner Project</title>
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
-
-    <link href="./style.css" type="text/css" rel="stylesheet" />
+    <link href="./style/style.css" type="text/css" rel="stylesheet" />
   </head>
 
   <body>
-    <div id="app">
-      <img alt="logo" class="logo" src="./assets/electron.svg" />
-      <div class="creator">Powered by electron-vite</div>
-      <div class="text">
-        Build an Electron app with
-        <span class="ts">TypeScript</span>
-      </div>
-      <p class="tip">Please try pressing <code>F12</code> to open the devTool</p>
-      <div class="actions">
-        <div class="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>Runner Project</h1>
+          <button class="btn-icon" id="btn-add-project" title="Add Project">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
         </div>
-        <div class="action">
-          <a id="ipcHandler" target="_blank" rel="noreferrer">Send IPC</a>
+        
+        <div class="projects-list" id="projects-list">
+          <!-- Projects will be rendered here -->
         </div>
-      </div>
+      </aside>
 
-      <ul class="versions">
-        <li class="electron-version"></li>
-        <li class="chrome-version"></li>
-        <li class="node-version"></li>
-      </ul>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+          <h2>No Project Selected</h2>
+          <p>Select a project from the sidebar or create a new one</p>
+        </div>
+
+        <!-- Project Detail -->
+        <div class="project-detail" id="project-detail" style="display: none;">
+          <div class="project-header">
+            <div class="project-info">
+              <h2 id="project-name">Project Name</h2>
+              <p id="project-description">Project description</p>
+            </div>
+            <div class="project-actions">
+              <button class="btn-icon" id="btn-edit-project" title="Edit Project">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn-icon btn-danger" id="btn-delete-project" title="Delete Project">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="content-wrapper">
+            <!-- Services List -->
+            <div class="services-section">
+              <div class="section-header">
+                <h3>Services</h3>
+                <button class="btn btn-primary btn-sm" id="btn-add-service">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Service
+                </button>
+                </div>
+              </div>
+              <div class="services-list" id="services-list">
+                <!-- Services will be rendered here -->
+              </div>
+            </div>
+
+            <!-- Terminal Section -->
+            <div class="terminal-section">
+              <div class="terminal-header">
+                <div class="terminal-tabs" id="terminal-tabs">
+                  <!-- Tabs will be rendered here -->
+                </div>
+                <button class="btn-icon btn-sm" id="btn-clear-terminal" title="Clear">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="terminal-output" id="terminal-output">
+                <div class="terminal-line">Ready to run commands...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
 
-    <script type="module" src="./main.ts"></script>
+    <!-- Modal Add/Edit Project -->
+    <div class="modal" id="modal-project">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-project-title">Add Project</h3>
+          <button class="btn-icon" id="btn-close-modal-project">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <form id="form-project">
+          <div class="form-group">
+            <label>Project Name *</label>
+            <input type="text" id="input-project-name" required placeholder="My Awesome Project" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="input-project-description" rows="3" placeholder="Project description..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Icon (emoji or text)</label>
+            <input type="text" id="input-project-icon" placeholder="🚀" maxlength="10" />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-project">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Add/Edit Service -->
+    <div class="modal" id="modal-service">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-service-title">Add Service</h3>
+          <button class="btn-icon" id="btn-close-modal-service">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <form id="form-service">
+          <div class="form-group">
+            <label>Service Name *</label>
+            <input type="text" id="input-service-name" required placeholder="Frontend" />
+          </div>
+          <div class="form-group">
+            <label>Working Directory *</label>
+            <div class="input-with-button">
+              <input type="text" id="input-service-cwd" required placeholder="/path/to/directory" readonly />
+              <button type="button" class="btn btn-secondary btn-browse" id="btn-browse-service-cwd">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Browse
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Executable *</label>
+            <input type="text" id="input-service-executable" required placeholder="npm" />
+          </div>
+          <div class="form-group">
+            <label>Arguments</label>
+            <input type="text" id="input-service-arguments" placeholder="run dev" />
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="input-service-autostart" />
+              <span>Auto start when project opens</span>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-service">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Add Command -->
+    <div class="modal" id="modal-command">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Command</h3>
+          <button class="btn-icon" id="btn-close-modal-command">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <form id="form-command">
+            <input type="hidden" name="service_id" id="commandServiceId" />
+          <div class="form-group">
+            <label>Command Name *</label>
+            <input type="text" id="input-command-name" required placeholder="Build" />
+          </div>
+          <div class="form-group">
+            <label>Executable *</label>
+            <input type="text" id="input-command-executable" required placeholder="npm" />
+          </div>
+          <div class="form-group">
+            <label>Arguments</label>
+            <input type="text" id="input-command-arguments" placeholder="run build" />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-command">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="./script/main.ts"></script>
   </body>
 </html>
