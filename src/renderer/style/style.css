@@ -476,16 +476,41 @@ body {
 
 .terminal-output {
   flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 13px;
-  line-height: 1.6;
+  overflow: hidden;
+  background: var(--terminal-bg);
+  position: relative;
 }
 
+.terminal-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.terminal-placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* XTerm overrides */
+.terminal-output .xterm {
+  padding: 10px;
+  height: 100% !important;
+}
+
+.terminal-output .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+/* Legacy terminal line styles - kept for backward compatibility */
 .terminal-line {
   margin-bottom: 4px;
   color: var(--text-secondary);
+  padding: 0 16px;
 }
 
 .terminal-line.success {

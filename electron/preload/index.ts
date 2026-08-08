@@ -26,6 +26,24 @@ const api = {
     create: (data: any) => ipcRenderer.invoke("command::create", data),
     update: (id: number, data: any) => ipcRenderer.invoke("command::update", id, data),
     delete: (id: number) => ipcRenderer.invoke("command::delete", id)
+  },
+  terminal: {
+    create: (serviceId: number, workingDirectory: string): Promise<void> =>
+      ipcRenderer.invoke("terminal:create", serviceId, workingDirectory),
+
+    write: (serviceId: number, data: string): void => {
+      ipcRenderer.send("terminal:write", serviceId, data);
+    },
+
+    onData: (callback: (serviceId: number, data: string) => void): void => {
+      ipcRenderer.on("terminal:data", (_, serviceId: number, data: string) => {
+        callback(serviceId, data);
+      });
+    },
+
+    destroy: (serviceId: number): void => {
+      ipcRenderer.send("terminal:destroy", serviceId);
+    }
   }
 }
 

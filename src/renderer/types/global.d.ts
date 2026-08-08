@@ -32,6 +32,12 @@ declare global {
         update(id: number, data: UpdateCommandDto): Promise<void>;
         delete(id: number): Promise<void>;
       };
+      terminal: {
+        create(serviceId: number, workingDirectory: string): Promise<void>
+        write(serviceId: number, data: string): void
+        onData(callback: (serviceId: number, data: string) => void): void
+        destroy(serviceId: number): void
+      },
     };
   }
 }

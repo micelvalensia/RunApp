@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createWindow } from './window'
-import { setupIpcHandlers } from './ipc'
+import { setupIpcHandlers, cleanupAllTerminals } from './ipc'
 import { initDatabase, closeDatabase } from '../../src/database/db'
 import { runMigrations } from '../../src/database/migrate'
 
@@ -49,6 +49,8 @@ app.whenReady().then(async () => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  console.log('All windows closed, cleaning up...')
+  cleanupAllTerminals()
   if (process.platform !== 'darwin') {
     closeDatabase()
     app.quit()
@@ -56,6 +58,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  console.log('App is quitting, cleaning up...')
+  cleanupAllTerminals()
   closeDatabase()
 })
 

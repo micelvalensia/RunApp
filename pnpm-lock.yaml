@@ -14,6 +14,12 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^4.0.0
         version: 4.0.0(electron@39.8.10)
+      '@lydell/node-pty':
+        specifier: 1.2.0-beta.14
+        version: 1.2.0-beta.14
+      '@xterm/xterm':
+        specifier: ^6.0.0
+        version: 6.0.0
       better-sqlite3:
         specifier: ^13.0.2
         version: 13.0.2
@@ -594,6 +600,39 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
+  '@lydell/node-pty-darwin-arm64@1.2.0-beta.14':
+    resolution: {integrity: sha512-C0Zxnl8rTrW/ngu1CKb1NoIiBxoCDL+9SpFSkOaV5MytE7pFN/qTVDFtuIOruE1SL6v17A71jI9bpUIBHn6jJA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@lydell/node-pty-darwin-x64@1.2.0-beta.14':
+    resolution: {integrity: sha512-P77aRx2TzjmlX6D3XUjTEi4rxvjkJA8VIBwUwe23pphg5DKdc9/g5Y+IsN3KX3lmNmKFVTBIbKcNkl+n8Cgwiw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@lydell/node-pty-linux-arm64@1.2.0-beta.14':
+    resolution: {integrity: sha512-xZclf3acgWmHi7VMZeVBUJRyJQf78pjCkeBf3ofT/5Xvn5QkRICCZJXtcg1f2lJoCtdF1OWHkeddmJgVDOSv6Q==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lydell/node-pty-linux-x64@1.2.0-beta.14':
+    resolution: {integrity: sha512-ijTyPgkECpLkrBqs/uuasaXgjv/lQf+5am19ywF6SQ6PsreHZgT36h2j5cdFTN551KHFEDMl6fCgMPDxEEyqxg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@lydell/node-pty-win32-arm64@1.2.0-beta.14':
+    resolution: {integrity: sha512-yw1R4qPtspu0w2p4YhoYuznfQQsdHrVtQnKVDKYTjyuqzF720JZyIdfTRQ0Fl8ChcNesLIrq1kIBfkDPy7CXgg==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@lydell/node-pty-win32-x64@1.2.0-beta.14':
+    resolution: {integrity: sha512-aenTbinERVvWgCQkFwqj9SOR+t/1ZVJ8RqMAk6nB9Lh7oiuRCDzVfs0fNhHRw7JtURZ4jG4i51jou0uXg2yrIw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@lydell/node-pty@1.2.0-beta.14':
+    resolution: {integrity: sha512-RjQis46eBwL9xyDvfXqVsNS2JZ5zQQK/QAYsNE5j8sYPTf4/OpG5Ghm92WGn+w4Rsk3LTpj2adpaZM9Cb8rzDA==}
+
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
     engines: {node: '>= 12.13.0'}
@@ -865,6 +904,9 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+
+  '@xterm/xterm@6.0.0':
+    resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
 
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}
@@ -2640,6 +2682,33 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@lydell/node-pty-darwin-arm64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty-darwin-x64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty-linux-arm64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty-linux-x64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty-win32-arm64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty-win32-x64@1.2.0-beta.14':
+    optional: true
+
+  '@lydell/node-pty@1.2.0-beta.14':
+    optionalDependencies:
+      '@lydell/node-pty-darwin-arm64': 1.2.0-beta.14
+      '@lydell/node-pty-darwin-x64': 1.2.0-beta.14
+      '@lydell/node-pty-linux-arm64': 1.2.0-beta.14
+      '@lydell/node-pty-linux-x64': 1.2.0-beta.14
+      '@lydell/node-pty-win32-arm64': 1.2.0-beta.14
+      '@lydell/node-pty-win32-x64': 1.2.0-beta.14
+
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
       cross-spawn: 7.0.6
@@ -2901,6 +2970,8 @@ snapshots:
       eslint-visitor-keys: 5.0.1
 
   '@xmldom/xmldom@0.8.13': {}
+
+  '@xterm/xterm@6.0.0': {}
 
   abbrev@4.0.0: {}
 
