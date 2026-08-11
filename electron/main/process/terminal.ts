@@ -4,7 +4,7 @@ import os from "node:os";
 export function createTerminal(cwd: string) {
     const shell =
         os.platform() === "win32"
-            ? "powershell.exe"
+            ? "cmd.exe"
             : "bash";
 
     return pty.spawn(shell, [], {

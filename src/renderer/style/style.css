@@ -202,8 +202,6 @@ body {
   padding: 24px 32px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-primary);
-  max-height: 500px;
-  overflow-y: auto;
 }
 
 .section-header {
@@ -226,7 +224,7 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
   max-height: none;
-  overflow-y: visible;
+  overflow-y: scroll;
   padding: 1rem;
 }
 

@@ -33,15 +33,8 @@ jobs:
       - name: Build Electron
         run: pnpm run build:win
 
-      - name: Create ZIP
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            -Path "dist/*.exe" `
-            -DestinationPath "dist/RunnerApp-${{ github.ref_name }}.zip"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/RunnerApp-${{ github.ref_name }}.zip
+            dist/*-portable.exe
