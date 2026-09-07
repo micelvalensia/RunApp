@@ -2,7 +2,6 @@ import { BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { cleanupAllTerminals } from './ipc'
 
 export function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -22,12 +21,6 @@ export function createWindow(): BrowserWindow {
     if (is.dev) {
       mainWindow.webContents.openDevTools()
     }
-  })
-
-  // Cleanup terminals saat window akan ditutup
-  mainWindow.on('close', () => {
-    console.log('Window is closing, cleaning up terminals...')
-    cleanupAllTerminals()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

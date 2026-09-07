@@ -1,7 +1,29 @@
 import { services, activeTerminalId, setActiveTerminalId } from './state';
-import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds } from './terminal';
+import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds, fitTerminal } from './terminal';
 import { renderServices } from './services';
 import { escapeHtml } from './dom';
+
+// Setup listener untuk event exit dari PTY
+window.api.terminal.onExit((serviceId: number) => {
+    const service = services.find(s => s.id === serviceId);
+    if (service) {
+        service.status = 'stopped';
+        window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+        renderServices();
+        renderTerminalTabs();
+    }
+});
+
+// Setup listener untuk status perubahan child process (e.g. Ctrl+C atau program selesai)
+window.api.terminal.onStatusChange((serviceId: number, status: 'running' | 'stopped') => {
+    const service = services.find(s => s.id === serviceId);
+    if (service && service.status !== status) {
+        service.status = status;
+        window.api.services.update(service.id, { status }).catch(console.error);
+        renderServices();
+        renderTerminalTabs();
+    }
+});
 
 // Switch to a terminal
 export async function switchToTerminal(serviceId: number): Promise<void> {
@@ -23,6 +45,7 @@ export async function switchToTerminal(serviceId: number): Promise<void> {
 
     renderServices();
     renderTerminalTabs();
+    setTimeout(() => fitTerminal(serviceId), 30);
 }
 
 // Render terminal tabs
@@ -76,6 +99,12 @@ export function renderTerminalTabs(): void {
 
 // Close a terminal tab
 export function handleCloseTerminal(serviceId: number): void {
+    const service = services.find(s => s.id === serviceId);
+    if (service) {
+        service.status = 'stopped';
+        window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+    }
+
     closeTerminal(serviceId);
 
     if (activeTerminalId === serviceId) {

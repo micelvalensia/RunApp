@@ -31,13 +31,32 @@ const api = {
     create: (serviceId: number, workingDirectory: string): Promise<void> =>
       ipcRenderer.invoke("terminal:create", serviceId, workingDirectory),
 
+    isRunning: (serviceId: number): Promise<boolean> =>
+      ipcRenderer.invoke("terminal:isRunning", serviceId),
+
     write: (serviceId: number, data: string): void => {
       ipcRenderer.send("terminal:write", serviceId, data);
+    },
+
+    resize: (serviceId: number, cols: number, rows: number): void => {
+      ipcRenderer.send("terminal:resize", serviceId, cols, rows);
     },
 
     onData: (callback: (serviceId: number, data: string) => void): void => {
       ipcRenderer.on("terminal:data", (_, serviceId: number, data: string) => {
         callback(serviceId, data);
+      });
+    },
+
+    onExit: (callback: (serviceId: number, exitCode: number) => void): void => {
+      ipcRenderer.on("terminal:exit", (_, serviceId: number, exitCode: number) => {
+        callback(serviceId, exitCode);
+      });
+    },
+
+    onStatusChange: (callback: (serviceId: number, status: 'running' | 'stopped') => void): void => {
+      ipcRenderer.on("terminal:status-change", (_, serviceId: number, status: 'running' | 'stopped') => {
+        callback(serviceId, status);
       });
     },
 

@@ -64,7 +64,7 @@
             </div>
           </div>
 
-          <div class="content-wrapper">
+          <div class="content-wrapper" id="content-wrapper">
             <!-- Services List -->
             <div class="services-section">
               <div class="section-header">
@@ -76,7 +76,6 @@
                   </svg>
                   Add Service
                 </button>
-                </div>
               </div>
               <div class="services-list" id="services-list">
                 <!-- Services will be rendered here -->
@@ -84,17 +83,27 @@
             </div>
 
             <!-- Terminal Section -->
-            <div class="terminal-section">
-              <div class="terminal-header">
+            <div class="terminal-section" id="terminal-section">
+              <div class="terminal-header" id="terminal-header">
                 <div class="terminal-tabs" id="terminal-tabs">
                   <!-- Tabs will be rendered here -->
                 </div>
-                <button class="btn-icon btn-sm" id="btn-clear-terminal" title="Clear">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
+                <div class="terminal-actions">
+                  <button class="btn-icon btn-sm" id="btn-maximize-terminal" title="Maximize/Restore Terminal">
+                    <svg class="icon-maximize" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                    <svg class="icon-minimize" style="display: none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                    </svg>
+                  </button>
+                  <button class="btn-icon btn-sm" id="btn-clear-terminal" title="Clear Terminal">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div class="terminal-output" id="terminal-output">
                 <div class="terminal-line">Ready to run commands...</div>

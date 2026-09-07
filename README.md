@@ -1,109 +1,113 @@
-# Runner Project
+# 🚀 Runner Project
 
-Aplikasi desktop untuk mengelola dan menjalankan services/commands dengan integrated terminal berbasis Electron.
+Aplikasi desktop modern berbasis **Electron + TypeScript** yang dirancang untuk mengelompokkan, mengelola, dan menjalankan multi-terminal service dalam satu workspace terpadu.
 
-## Features
+---
 
-- 📁 **Project Management** - Kelola multiple projects dalam satu aplikasi
-- 🚀 **Service Management** - Tambah, edit, dan jalankan services per project
-- 💻 **Integrated Terminal** - Terminal bawaan dengan XTerm untuk setiap service
-- ⚡ **Command Shortcuts** - Simpan dan jalankan command favorit dengan satu klik
-- 💾 **SQLite Database** - Data tersimpan lokal dengan SQLite
-- 🎨 **Modern UI** - Interface clean dan responsive
+## ✨ Fitur Utama
 
-## Installation
+- 📁 **Project & Service Grouping**: Kelompokkan beberapa service (misal Frontend, Backend API, Worker, Database) dalam satu project tanpa membuka puluhan jendela terminal terpisah.
+- ▶️ **One-Click Command Execution**: Jalankan executable utama atau sub-commands kustom secara langsung dari kartu service.
+- 🟢 **Live Process & Status Tracking**: Deteksi real-time apakah command sedang berjalan (`running`) atau berhenti (`stopped`), termasuk saat dihentikan via `Ctrl+C` di terminal maupun saat proses selesai otomatis.
+- 💻 **Smart Responsive Terminal (XTerm.js + FitAddon)**: 
+  - Auto-fit ukuran baris & kolom terminal mengikuti ukuran window/container secara dinamis.
+  - Scrollback buffer hingga **10.000 baris** dengan scrolling yang halus tanpa terpotong.
+  - Tombol **Clear Terminal** untuk membersihkan layar secara instan.
+- ⛶ **Terminal Focus / Maximize Mode**: Maksimalkan tampilan terminal hingga 100% layar dengan tombol maximize atau cukup **Double-Click** pada header terminal.
+- 💾 **Local SQLite Storage**: Semua konfigurasi project, service, dan commands tersimpan aman dan cepat menggunakan `better-sqlite3`.
+- 🛡️ **Graceful Process Lifecycle**: Terminal PTY dibersihkan secara otomatis saat aplikasi ditutup untuk mencegah zombie process.
 
-### Download Installer
+---
 
-Installer tersedia di folder `installers/`:
+## 🛠️ Tech Stack
 
-- **Windows Portable**: `runner-project-1.0.0-win-portable.zip` (87 MB)
-  - Extract zip dan jalankan `runner-project.exe`
-  - Tidak perlu instalasi, langsung jalankan
+- **Desktop Framework**: [Electron](https://www.electronjs.org/)
+- **Build Tool**: [electron-vite](https://electron-vite.org/) & [Vite](https://vitejs.dev/)
+- **Language**: TypeScript
+- **Database**: SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3))
+- **Terminal & PTY**: [@xterm/xterm](https://xtermjs.org/), [@xterm/addon-fit](https://www.npmjs.com/package/@xterm/addon-fit), [@lydell/node-pty](https://github.com/lydell/node-pty)
+- **Package Manager**: [pnpm](https://pnpm.io/)
 
-### Build from Source (untuk Linux atau full installer)
+---
 
+## 🚀 Memulai Pengembangan (Development)
+
+### Prasyarat
+- **Node.js**: Versi 20 atau lebih baru
+- **pnpm**: Versi 10 atau lebih baru
+
+### Instalasi & Menjalankan Aplikasi
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://github.com/micelvalensia/RunApp.git
 cd RunApp
 
-# Install dependencies
+# 2. Install dependencies
 pnpm install
 
-# Build installer Linux
-pnpm build:linux
-
-# Build installer Windows 
-pnpm build:win
-
-# Hasil installer akan ada di folder dist/
-# - Linux: dist/runner-project-1.0.0.AppImage
-# - Windows: dist/runner-project-1.0.0-setup.exe
+# 3. Jalankan aplikasi dalam mode development
+pnpm dev
 ```
 
-## Development
-
-### Prerequisites
-
-- Node.js 18+ 
-- pnpm
-
-### Setup
-
+### Scripts Tambahan
 ```bash
-# Install dependencies
-pnpm install
+# Typecheck TypeScript (Node & Web)
+pnpm typecheck
 
-# Run development mode
-pnpm dev
-
-# Build aplikasi
+# Build bundle produksi
 pnpm build
 
-# Build installer
-pnpm build:linux   # Linux (AppImage, Snap, Deb)
-pnpm build:win     # Windows (NSIS installer)
+# Build installer lokal
+pnpm build:linux    # Linux (AppImage, Deb, Snap)
+pnpm build:win      # Windows (NSIS Installer & Portable)
 ```
 
-## Tech Stack
+---
 
-- **Electron** - Desktop framework
-- **TypeScript** - Type-safe development
-- **Vite** - Fast build tool
-- **SQLite** (better-sqlite3) - Local database
-- **XTerm.js** - Terminal emulator
-- **node-pty** - PTY process management
+## 📦 Build Windows (.exe) via GitHub Actions (CI/CD)
 
-## Project Structure
+Karena dependensi `better-sqlite3` dan `node-pty` memerlukan kompilasi native C++, repository ini sudah dilengkapi dengan **GitHub Actions Workflow** (`windows-latest`) agar kamu bisa membuat installer Windows tanpa perlu memiliki laptop Windows.
+
+### 1. Build Manual (Kapan Saja)
+1. Buka tab **Actions** di repository GitHub.
+2. Pilih workflow **Build Windows Release** di sidebar kiri.
+3. Klik dropdown **Run workflow** ▶️.
+4. Setelah proses selesai (± 2-3 menit), download file `.exe` dari bagian **Artifacts**.
+
+### 2. Auto-Publish Release via Git Tag
+Cukup buat tag versi baru dan push ke GitHub:
+```bash
+git tag v1.0.4
+git push origin v1.0.4
+```
+GitHub Actions akan otomatis me-build dan merilis file installer di halaman **GitHub Releases**:
+- `runner-project-1.0.4-nsis.exe` (*Installer - Startup instan & direkomendasikan*)
+- `runner-project-1.0.4-portable.exe` (*Portable standalone tanpa instalasi*)
+
+---
+
+## 📂 Struktur Project
 
 ```
-├── electron/          # Main & preload process
-│   ├── main/         # Main process (Node.js)
-│   └── preload/      # Preload script
+├── .github/
+│   └── workflows/        # GitHub Actions CI/CD workflows
+├── electron/
+│   ├── main/             # Electron Main Process (PTY, IPC handlers, lifecycle)
+│   └── preload/          # Preload bridge API
 ├── src/
-│   ├── database/     # Database setup & migrations
-│   ├── repositories/ # Data access layer
-│   ├── services/     # Business logic
-│   ├── renderer/     # UI layer
-│   │   ├── script/   # Frontend TypeScript
-│   │   └── style/    # CSS
-│   └── shared/       # Shared types
-└── installers/       # Built installers
+│   ├── database/         # SQLite schema & database migrations
+│   ├── repositories/     # Data Access Layer (Projects, Services, Commands)
+│   ├── services/         # Business logic layer
+│   ├── renderer/         # Frontend UI (HTML, CSS, TypeScript)
+│   │   ├── script/       # UI Logic, state, event handlers, terminal manager
+│   │   └── style/        # Modern dark-theme stylesheet
+│   └── shared/           # Shared TypeScript types & interfaces
+├── electron-builder.yml  # Konfigurasi packaging Electron Builder
+└── package.json
 ```
 
-## Recent Improvements
+---
 
-### Code Refactoring
-- Split monolithic `main.ts` (600+ lines) into modular files
-- Better separation of concerns (state, DOM, services, handlers)
-- Eliminated circular dependencies
+## 📄 Lisensi
 
-### Bug Fixes
-- ✅ Fixed terminal process cleanup on app close
-- ✅ PTY processes now properly terminate when window closes
-- ✅ No more zombie processes in background
-
-## License
-
-MIT
+Proyek ini dilisensikan di bawah lisensi [MIT](LICENSE).

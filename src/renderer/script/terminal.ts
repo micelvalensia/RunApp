@@ -1,8 +1,11 @@
 import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 
 const xtermInstances = new Map<number, Terminal>();
+const fitAddons = new Map<number, FitAddon>();
 const terminalContainers = new Map<number, HTMLDivElement>();
+let resizeObserver: ResizeObserver | null = null;
 
 // Setup listener untuk data dari PTY
 window.api.terminal.onData((serviceId: number, data: string) => {
@@ -12,15 +15,61 @@ window.api.terminal.onData((serviceId: number, data: string) => {
     }
 });
 
+function initResizeObserver(): void {
+    const output = document.getElementById("terminal-output");
+    if (output && !resizeObserver) {
+        resizeObserver = new ResizeObserver(() => {
+            terminalContainers.forEach((container, serviceId) => {
+                if (container.style.display !== "none") {
+                    fitTerminal(serviceId);
+                }
+            });
+        });
+        resizeObserver.observe(output);
+    }
+}
+
+/**
+ * Fit terminal dimensions to its container and notify PTY
+ */
+export function fitTerminal(serviceId?: number | null): void {
+    if (serviceId === null || serviceId === undefined) return;
+
+    const fitAddon = fitAddons.get(serviceId);
+    const terminal = xtermInstances.get(serviceId);
+    const container = terminalContainers.get(serviceId);
+
+    if (fitAddon && terminal && container && container.style.display !== "none") {
+        try {
+            fitAddon.fit();
+            if (terminal.cols > 0 && terminal.rows > 0) {
+                window.api.terminal.resize(serviceId, terminal.cols, terminal.rows);
+            }
+        } catch (err) {
+            console.error("Error fitting terminal:", err);
+        }
+    }
+}
+
+/**
+ * Clear the active terminal buffer
+ */
+export function clearTerminal(serviceId?: number | null): void {
+    if (serviceId === null || serviceId === undefined) return;
+    const terminal = xtermInstances.get(serviceId);
+    if (terminal) {
+        terminal.clear();
+    }
+}
+
 /**
  * Render/tampilkan terminal untuk service tertentu
- * - Buat XTerm instance jika belum ada
- * - Switch visibility ke terminal yang dipilih
- * - Jangan destroy terminal yang lama
  */
 export function renderTerminal(serviceId: number): void {
     const output = document.getElementById("terminal-output");
     if (!output) return;
+
+    initResizeObserver();
 
     // Hapus placeholder jika ada
     const placeholder = output.querySelector(".terminal-placeholder");
@@ -56,14 +105,21 @@ export function renderTerminal(serviceId: number): void {
     if (!terminal) {
         terminal = new Terminal({
             cursorBlink: true,
-            fontSize: 14,
+            fontSize: 13,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
             theme: {
-                background: "#1e1e1e",
-                foreground: "#d4d4d4",
+                background: "#16161e",
+                foreground: "#c0caf5",
+                cursor: "#7aa2f7",
+                selectionBackground: "rgba(122, 162, 247, 0.3)",
             },
             convertEol: true,
+            scrollback: 10000,
         });
+
+        const fitAddon = new FitAddon();
+        terminal.loadAddon(fitAddon);
+        fitAddons.set(serviceId, fitAddon);
 
         terminal.open(terminalContainer);
 
@@ -75,7 +131,11 @@ export function renderTerminal(serviceId: number): void {
         xtermInstances.set(serviceId, terminal);
     }
 
-    terminal.focus();
+    // Fit & focus
+    setTimeout(() => {
+        fitTerminal(serviceId);
+        terminal?.focus();
+    }, 20);
 }
 
 /**
@@ -89,6 +149,8 @@ export function closeTerminal(serviceId: number): void {
         terminal.dispose();
         xtermInstances.delete(serviceId);
     }
+
+    fitAddons.delete(serviceId);
 
     if (container) {
         container.remove();

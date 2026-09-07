@@ -34,8 +34,12 @@ declare global {
       };
       terminal: {
         create(serviceId: number, workingDirectory: string): Promise<void>
+        isRunning(serviceId: number): Promise<boolean>
         write(serviceId: number, data: string): void
+        resize(serviceId: number, cols: number, rows: number): void
         onData(callback: (serviceId: number, data: string) => void): void
+        onExit(callback: (serviceId: number, exitCode: number) => void): void
+        onStatusChange(callback: (serviceId: number, status: 'running' | 'stopped') => void): void
         destroy(serviceId: number): void
       },
     };

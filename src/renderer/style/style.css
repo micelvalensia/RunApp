@@ -199,9 +199,12 @@ body {
 
 /* Services Section */
 .services-section {
-  padding: 24px 32px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-primary);
+  max-height: 42vh;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .section-header {
@@ -212,6 +215,7 @@ body {
   top: 0;
   background: var(--bg-primary);
   z-index: 10;
+  padding-bottom: 8px;
 }
 
 .section-header h3 {
@@ -222,10 +226,8 @@ body {
 .services-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  max-height: none;
-  overflow-y: scroll;
-  padding: 1rem;
+  gap: 14px;
+  padding: 8px 0;
 }
 
 .service-card {
@@ -379,6 +381,18 @@ body {
   transform: translateY(-1px);
 }
 
+.command-btn-main.running {
+  background: rgba(158, 206, 106, 0.15);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.command-btn-main.running:hover {
+  background: rgba(247, 118, 142, 0.2);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .command-btn-add {
   border-style: dashed;
   color: var(--text-muted);
@@ -393,12 +407,24 @@ body {
 }
 
 /* Terminal Section */
+/* Terminal Section */
 .terminal-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: var(--terminal-bg);
   overflow: hidden;
+  min-height: 0;
+}
+
+/* Maximized terminal full focus mode */
+.content-wrapper.terminal-maximized .services-section {
+  display: none !important;
+}
+
+.content-wrapper.terminal-maximized .terminal-section {
+  flex: 1;
+  height: 100%;
 }
 
 .terminal-header {
@@ -408,6 +434,44 @@ body {
   padding: 8px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.terminal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-actions .btn-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.terminal-actions .btn-icon:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.terminal-actions .btn-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  display: block;
 }
 
 .terminal-tabs {
@@ -477,6 +541,9 @@ body {
   overflow: hidden;
   background: var(--terminal-bg);
   position: relative;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .terminal-container {
@@ -485,6 +552,9 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 10px;
 }
 
 .terminal-placeholder {
@@ -496,12 +566,18 @@ body {
 
 /* XTerm overrides */
 .terminal-output .xterm {
-  padding: 10px;
   height: 100% !important;
+  width: 100% !important;
 }
 
 .terminal-output .xterm-viewport {
   overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-tertiary) transparent;
+}
+
+.terminal-output .xterm-screen {
+  height: 100%;
 }
 
 /* Legacy terminal line styles - kept for backward compatibility */
@@ -562,6 +638,12 @@ body {
 .btn-icon.btn-sm {
   width: 28px;
   height: 28px;
+}
+
+.btn-icon svg {
+  stroke: currentColor;
+  fill: none;
+  display: block;
 }
 
 .btn-icon.btn-danger:hover {

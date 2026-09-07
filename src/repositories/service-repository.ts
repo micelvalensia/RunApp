@@ -76,6 +76,10 @@ class ServiceRepository extends BaseRepository {
             fields.push("auto_start = ?");
             values.push(data.auto_start);
         }
+        if (data.status !== undefined) {
+            fields.push("status = ?");
+            values.push(data.status);
+        }
 
         if (fields.length === 0) return;
 

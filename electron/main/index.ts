@@ -45,22 +45,26 @@ app.whenReady().then(async () => {
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  console.log('All windows closed, cleaning up...')
+let isCleanedUp = false
+
+function safeAppCleanup(): void {
+  if (isCleanedUp) return
+  isCleanedUp = true
+  console.log('Performing safe app cleanup...')
   cleanupAllTerminals()
+  closeDatabase()
+}
+
+// Quit when all windows are closed, except on macOS.
+app.on('window-all-closed', () => {
+  safeAppCleanup()
   if (process.platform !== 'darwin') {
-    closeDatabase()
     app.quit()
   }
 })
 
 app.on('before-quit', () => {
-  console.log('App is quitting, cleaning up...')
-  cleanupAllTerminals()
-  closeDatabase()
+  safeAppCleanup()
 })
 
 // In this file you can include the rest of your app's specific main process

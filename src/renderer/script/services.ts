@@ -1,3 +1,4 @@
+import type { Command } from '../../shared/types/command';
 import type { Service } from '../../shared/types/service';
 import {
     currentProject,
@@ -23,6 +24,16 @@ export async function loadServices(): Promise<void> {
 
         const loadedServices = await window.api.services.getAll(currentProject.id);
         console.log('Services loaded:', loadedServices);
+
+        // Sync running status with actual active PTY processes
+        for (const s of loadedServices) {
+            const isRunning = await window.api.terminal.isRunning(s.id);
+            if (!isRunning && s.status === 'running') {
+                s.status = 'stopped';
+                window.api.services.update(s.id, { status: 'stopped' }).catch(console.error);
+            }
+        }
+
         setServices(loadedServices);
         renderServices();
     } catch (error) {
@@ -81,13 +92,13 @@ export async function renderServices(): Promise<void> {
       </div>
       <div class="service-status ${service.status === 'running' ? 'running' : ''}">${service.status}</div>
       <div class="service-commands">
-        <button class="command-btn" data-action="run" data-service-id="${service.id}">
-          ${service.status === 'running' ? '⏸' : '▶'} ${service.executable} ${service.arguments || ''}
+        <button class="command-btn command-btn-main ${service.status === 'running' ? 'running' : ''}" data-action="run-main" data-service-id="${service.id}" title="${service.status === 'running' ? 'Stop Service' : 'Run Service'}">
+          ${service.status === 'running' ? '⏸' : '▶'} ${escapeHtml(service.executable)} ${escapeHtml(service.arguments || '')}
         </button>
        ${service.commands.map((com) => `
-          <button class="command-btn" data-action="run" data-service-id="${com.id}">
-            ${com.executable} ${com.arguments || ''}
-            <span class="x-button" data-action="delete-command" data-command-id="${com.id}">&times;</span>
+          <button class="command-btn" data-action="run-command" data-service-id="${service.id}" data-command-id="${com.id}" title="Run ${escapeHtml(com.executable)}">
+            ▶ ${escapeHtml(com.executable)} ${escapeHtml(com.arguments || '')}
+            <span class="x-button" data-action="delete-command" data-command-id="${com.id}" title="Delete Command">&times;</span>
           </button>
         `).join('')
             }
@@ -135,13 +146,25 @@ function attachServiceCardListeners(card: HTMLElement, service: Service): void {
         });
     });
 
-    card.querySelector('[data-action="run"]')?.addEventListener('click', (e) => {
+    card.querySelector('[data-action="run-main"]')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        handleRunService(service.id);
+        handleToggleMainService(service);
+    });
+
+    card.querySelectorAll('[data-action="run-command"]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).closest('[data-action="delete-command"]')) return;
+            e.stopPropagation();
+            const commandId = Number((btn as HTMLElement).dataset.commandId);
+            const cmd = service.commands.find(c => c.id === commandId);
+            if (cmd) {
+                handleRunExtraCommand(service, cmd);
+            }
+        });
     });
 }
 
-// Service event handlers (defined here to avoid circular dependency)
+// Service event handlers
 function handleEditService(serviceId: number): void {
     const service = services.find(s => s.id === serviceId);
     if (service) {
@@ -149,10 +172,37 @@ function handleEditService(serviceId: number): void {
     }
 }
 
-async function handleRunService(serviceId: number): Promise<void> {
-    const service = services.find(s => s.id === serviceId);
-    if (!service) return;
-    switchToTerminal(serviceId);
+async function handleToggleMainService(service: Service): Promise<void> {
+    if (service.status === 'running') {
+        window.api.terminal.write(service.id, '\x03');
+        service.status = 'stopped';
+        await window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+        renderServices();
+        renderTerminalTabs();
+        return;
+    }
+
+    await switchToTerminal(service.id);
+    const cmd = [service.executable, service.arguments].filter(Boolean).join(' ').trim();
+    if (cmd) {
+        window.api.terminal.write(service.id, `${cmd}\r`);
+    }
+    service.status = 'running';
+    await window.api.services.update(service.id, { status: 'running' }).catch(console.error);
+    renderServices();
+    renderTerminalTabs();
+}
+
+async function handleRunExtraCommand(service: Service, command: Command): Promise<void> {
+    await switchToTerminal(service.id);
+    const cmd = [command.executable, command.arguments].filter(Boolean).join(' ').trim();
+    if (cmd) {
+        window.api.terminal.write(service.id, `${cmd}\r`);
+    }
+    service.status = 'running';
+    await window.api.services.update(service.id, { status: 'running' }).catch(console.error);
+    renderServices();
+    renderTerminalTabs();
 }
 
 async function handleDeleteService(serviceId: number): Promise<void> {
