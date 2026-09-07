@@ -18,10 +18,10 @@ win:
     - target: portable
       arch:
         - x64
-  artifactName: ${productName}-${version}-${target}.${ext}
   asar: true
 
 nsis:
+  artifactName: ${productName}-${version}-setup.${ext}
   oneClick: true
   perMachine: false
   allowElevation: true
@@ -29,6 +29,9 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Runner Project
+
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
