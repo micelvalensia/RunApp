@@ -31,8 +31,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Setup MSVC C++ Environment
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --ignore-scripts
+
+      - name: Rebuild native dependencies for Electron
+        run: pnpm exec electron-builder install-app-deps
 
       - name: Build Windows Application
         run: pnpm run build:win
