@@ -16,6 +16,7 @@ import {
     inputServiceExecutable,
     inputServiceArguments,
     inputServiceAutostart,
+    inputServiceShell,
     inputCommandServiceId
 } from './dom';
 
@@ -51,10 +52,12 @@ export function openServiceModal(service?: Service): void {
         inputServiceExecutable.value = service.executable;
         inputServiceArguments.value = service.arguments || '';
         inputServiceAutostart.checked = service.auto_start === 1;
+        inputServiceShell.value = service.terminal_shell || localStorage.getItem('preferred_terminal_shell') || 'bash';
         formService.dataset.serviceId = service.id.toString();
     } else {
         modalServiceTitle.textContent = 'Add Service';
         formService.reset();
+        inputServiceShell.value = localStorage.getItem('preferred_terminal_shell') || 'bash';
         delete formService.dataset.serviceId;
     }
 

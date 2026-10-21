@@ -28,6 +28,10 @@ export const inputServiceCwd = document.getElementById('input-service-cwd') as H
 export const inputServiceExecutable = document.getElementById('input-service-executable') as HTMLInputElement;
 export const inputServiceArguments = document.getElementById('input-service-arguments') as HTMLInputElement;
 export const inputServiceAutostart = document.getElementById('input-service-autostart') as HTMLInputElement;
+export const inputServiceShell = document.getElementById('input-service-shell') as HTMLSelectElement;
+
+// Terminal actions
+export const selectTerminalShell = document.getElementById('select-terminal-shell') as HTMLSelectElement;
 
 // Command form inputs
 export const inputCommandName = document.getElementById('input-command-name') as HTMLInputElement;

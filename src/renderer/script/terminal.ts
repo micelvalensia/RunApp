@@ -63,6 +63,15 @@ export function clearTerminal(serviceId?: number | null): void {
 }
 
 /**
+ * Hide semua terminal container
+ */
+export function hideAllTerminals(): void {
+    terminalContainers.forEach((container) => {
+        container.style.display = "none";
+    });
+}
+
+/**
  * Render/tampilkan terminal untuk service tertentu
  */
 export function renderTerminal(serviceId: number): void {

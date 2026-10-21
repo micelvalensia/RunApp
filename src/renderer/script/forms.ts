@@ -9,6 +9,7 @@ import {
     inputServiceExecutable,
     inputServiceArguments,
     inputServiceAutostart,
+    inputServiceShell,
     inputCommandName,
     inputCommandExecutable,
     inputCommandArguments,
@@ -63,13 +64,17 @@ export async function handleServiceSubmit(e: Event): Promise<void> {
     }
 
     const serviceId = formService.dataset.serviceId;
+    const selectedShell = inputServiceShell.value || 'bash';
+    localStorage.setItem('preferred_terminal_shell', selectedShell);
+
     const data = serviceId ? {
         // Update - tidak perlu project_id
         name: inputServiceName.value.trim(),
         working_directory: inputServiceCwd.value.trim(),
         executable: inputServiceExecutable.value.trim(),
         arguments: inputServiceArguments.value.trim(),
-        auto_start: inputServiceAutostart.checked ? 1 : 0
+        auto_start: inputServiceAutostart.checked ? 1 : 0,
+        terminal_shell: selectedShell
     } : {
         // Create - perlu project_id
         project_id: currentProject.id,
@@ -78,7 +83,8 @@ export async function handleServiceSubmit(e: Event): Promise<void> {
         executable: inputServiceExecutable.value.trim(),
         arguments: inputServiceArguments.value.trim(),
         auto_start: inputServiceAutostart.checked ? 1 : 0,
-        status: 'stopped'
+        status: 'stopped',
+        terminal_shell: selectedShell
     };
 
     // Validation

@@ -5,10 +5,12 @@ import {
     modalProject,
     modalService,
     modalCommand,
-    inputServiceCwd
+    inputServiceCwd,
+    selectTerminalShell
 } from './dom';
-import { currentProject, activeTerminalId } from './state';
-import { clearTerminal, fitTerminal } from './terminal';
+import { currentProject, activeTerminalId, services } from './state';
+import { clearTerminal, fitTerminal, hasTerminal, closeTerminal } from './terminal';
+import { switchToTerminal } from './terminal-manager';
 import { loadProjects, showProjectDetail } from './projects';
 import { openProjectModal, openServiceModal, closeProjectModal, closeServiceModal, closeCommandModal } from './modals';
 import { handleProjectSubmit, handleServiceSubmit, handleCommandSubmit } from './forms';
@@ -72,6 +74,33 @@ export function setupEventListeners(): void {
     formCommand?.addEventListener('submit', handleCommandSubmit);
 
     // Terminal actions
+    selectTerminalShell?.addEventListener('change', async () => {
+        const newShell = selectTerminalShell.value;
+        localStorage.setItem('preferred_terminal_shell', newShell);
+
+        if (activeTerminalId !== null) {
+            const service = services.find(s => s.id === activeTerminalId);
+            if (service) {
+                service.terminal_shell = newShell;
+                await window.api.services.update(service.id, { terminal_shell: newShell }).catch(console.error);
+
+                if (hasTerminal(activeTerminalId)) {
+                    const shouldRestart = confirm(`Switch terminal shell to ${newShell} and restart session?`);
+                    if (shouldRestart) {
+                        if (service.status === 'running') {
+                            window.api.terminal.write(service.id, '\x03');
+                            service.status = 'stopped';
+                            service.running_command = null;
+                            await window.api.services.update(service.id, { status: 'stopped', running_command: null }).catch(console.error);
+                        }
+                        closeTerminal(activeTerminalId);
+                        await switchToTerminal(activeTerminalId);
+                    }
+                }
+            }
+        }
+    });
+
     document.getElementById('btn-clear-terminal')?.addEventListener('click', () => {
         if (activeTerminalId !== null) {
             clearTerminal(activeTerminalId);

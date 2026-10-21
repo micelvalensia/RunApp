@@ -1,4 +1,6 @@
 import { ipcMain, BrowserWindow } from "electron";
+import os from "node:os";
+import fs from "node:fs";
 import { createTerminal, hasChildProcesses } from "../process/terminal.js";
 
 const terminals = new Map<number, ReturnType<typeof createTerminal>>();
@@ -51,7 +53,7 @@ function startStatusMonitoring(webContents: Electron.WebContents) {
 export function registerTerminalIPC() {
     ipcMain.handle(
         "terminal:create",
-        (event, serviceId: number, workingDirectory: string) => {
+        (event, serviceId: number, workingDirectory: string, shell?: string) => {
             startStatusMonitoring(event.sender);
 
             // Jangan buat PTY baru jika sudah ada
@@ -59,7 +61,7 @@ export function registerTerminalIPC() {
                 return;
             }
 
-            const terminal = createTerminal(workingDirectory);
+            const terminal = createTerminal(workingDirectory, shell);
             terminals.set(serviceId, terminal);
             activeJobStatus.set(serviceId, false);
 
@@ -76,6 +78,18 @@ export function registerTerminalIPC() {
                 safeSend(event.sender, "terminal:exit", serviceId, exitCode);
                 safeSend(event.sender, "terminal:status-change", serviceId, "stopped");
             });
+
+            // Notice if user selected cmd on a non-Windows machine without cmd
+            if (os.platform() !== "win32" && shell === "cmd" && !fs.existsSync("/usr/bin/cmd")) {
+                setTimeout(() => {
+                    safeSend(
+                        event.sender,
+                        "terminal:data",
+                        serviceId,
+                        "\r\n\x1b[33m[Runner] Note: 'cmd' is a Windows shell. Using default shell (bash) on Linux/macOS.\x1b[0m\r\n\r\n"
+                    );
+                }, 100);
+            }
         }
     );
 
@@ -83,6 +97,10 @@ export function registerTerminalIPC() {
         const terminal = terminals.get(serviceId);
         if (!terminal) return false;
         return await hasChildProcesses(terminal.pid);
+    });
+
+    ipcMain.handle("terminal:hasTerminal", (_, serviceId: number) => {
+        return terminals.has(serviceId);
     });
 
     ipcMain.on(

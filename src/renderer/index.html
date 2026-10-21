@@ -89,6 +89,13 @@
                   <!-- Tabs will be rendered here -->
                 </div>
                 <div class="terminal-actions">
+                  <select id="select-terminal-shell" class="terminal-shell-select" title="Terminal Shell">
+                    <option value="bash">bash</option>
+                    <option value="cmd">cmd</option>
+                    <option value="powershell">powershell</option>
+                    <option value="sh">sh</option>
+                    <option value="zsh">zsh</option>
+                  </select>
                   <button class="btn-icon btn-sm" id="btn-maximize-terminal" title="Maximize/Restore Terminal">
                     <svg class="icon-maximize" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
@@ -183,6 +190,16 @@
           <div class="form-group">
             <label>Arguments</label>
             <input type="text" id="input-service-arguments" placeholder="run dev" />
+          </div>
+          <div class="form-group">
+            <label>Terminal Shell</label>
+            <select id="input-service-shell">
+              <option value="bash">bash</option>
+              <option value="cmd">cmd</option>
+              <option value="powershell">powershell</option>
+              <option value="sh">sh</option>
+              <option value="zsh">zsh</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="checkbox-label">

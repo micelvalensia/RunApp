@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createWindow } from './window'
 import { setupIpcHandlers, cleanupAllTerminals } from './ipc'
+import { setupAutoUpdater } from './updater'
 import { initDatabase, closeDatabase } from '../../src/database/db'
 import { runMigrations } from '../../src/database/migrate'
 
@@ -37,6 +38,9 @@ app.whenReady().then(async () => {
   setupIpcHandlers()
 
   createWindow()
+
+  // Setup auto-updater (active only in packaged production)
+  setupAutoUpdater()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

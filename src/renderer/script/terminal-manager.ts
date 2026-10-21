@@ -1,5 +1,5 @@
-import { services, activeTerminalId, setActiveTerminalId } from './state';
-import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds, fitTerminal } from './terminal';
+import { currentProject, services, activeTerminalId, setActiveTerminalId, getProjectActiveTerminalId } from './state';
+import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds, fitTerminal, hideAllTerminals } from './terminal';
 import { renderServices } from './services';
 import { escapeHtml } from './dom';
 
@@ -8,10 +8,12 @@ window.api.terminal.onExit((serviceId: number) => {
     const service = services.find(s => s.id === serviceId);
     if (service) {
         service.status = 'stopped';
-        window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+        service.running_command = null;
         renderServices();
         renderTerminalTabs();
     }
+    // Update DB regardless of which project is open
+    window.api.services.update(serviceId, { status: 'stopped', running_command: null }).catch(console.error);
 });
 
 // Setup listener untuk status perubahan child process (e.g. Ctrl+C atau program selesai)
@@ -19,9 +21,17 @@ window.api.terminal.onStatusChange((serviceId: number, status: 'running' | 'stop
     const service = services.find(s => s.id === serviceId);
     if (service && service.status !== status) {
         service.status = status;
-        window.api.services.update(service.id, { status }).catch(console.error);
+        if (status === 'stopped') {
+            service.running_command = null;
+        }
         renderServices();
         renderTerminalTabs();
+    }
+    // Update DB regardless of which project is open
+    if (status === 'stopped') {
+        window.api.services.update(serviceId, { status: 'stopped', running_command: null }).catch(console.error);
+    } else {
+        window.api.services.update(serviceId, { status: 'running' }).catch(console.error);
     }
 });
 
@@ -32,6 +42,13 @@ export async function switchToTerminal(serviceId: number): Promise<void> {
 
     setActiveTerminalId(serviceId);
 
+    // Sync dropdown shell in terminal header
+    const shellSelect = document.getElementById('select-terminal-shell') as HTMLSelectElement | null;
+    const currentShell = service.terminal_shell || localStorage.getItem('preferred_terminal_shell') || 'bash';
+    if (shellSelect) {
+        shellSelect.value = currentShell;
+    }
+
     // Check if terminal already exists
     const terminalExists = hasTerminal(serviceId);
 
@@ -40,7 +57,7 @@ export async function switchToTerminal(serviceId: number): Promise<void> {
 
     // 2. Create PTY for this service if it doesn't exist
     if (!terminalExists) {
-        await window.api.terminal.create(serviceId, service.working_directory);
+        await window.api.terminal.create(serviceId, service.working_directory, currentShell);
     }
 
     renderServices();
@@ -102,25 +119,80 @@ export function handleCloseTerminal(serviceId: number): void {
     const service = services.find(s => s.id === serviceId);
     if (service) {
         service.status = 'stopped';
-        window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+        service.running_command = null;
+        window.api.services.update(service.id, { status: 'stopped', running_command: null }).catch(console.error);
     }
 
     closeTerminal(serviceId);
 
     if (activeTerminalId === serviceId) {
-        // Switch to first available terminal or null
-        const remainingTerminals = getActiveTerminalIds();
-        setActiveTerminalId(remainingTerminals[0] || null);
+        // Switch to first available terminal for the current project or null
+        const projectTerminals = getActiveTerminalIds().filter(id => services.some(s => s.id === id));
+        const nextId = projectTerminals[0] || null;
+        setActiveTerminalId(nextId);
 
-        if (activeTerminalId) {
-            switchToTerminal(activeTerminalId);
+        if (nextId) {
+            switchToTerminal(nextId);
         } else {
-            // Display placeholder
-            const terminalOutput = document.getElementById('terminal-output')!;
-            terminalOutput.innerHTML = '<div class="terminal-placeholder">No terminal selected. Click a service to open its terminal.</div>';
+            hideAllTerminals();
+            const terminalOutput = document.getElementById('terminal-output');
+            if (terminalOutput) {
+                terminalOutput.innerHTML = '<div class="terminal-placeholder">No terminal selected. Click a service to open its terminal.</div>';
+            }
         }
     }
 
     renderServices();
     renderTerminalTabs();
+}
+
+/**
+ * Restore active terminal display when switching projects
+ */
+export function restoreProjectTerminal(): void {
+    if (!currentProject) return;
+
+    let targetId = getProjectActiveTerminalId(currentProject.id);
+
+    // If targetId is not set or doesn't belong to current services, find one
+    if (targetId === null || !services.some(s => s.id === targetId)) {
+        // Priority 1: Service that has an open terminal and is running
+        const runningWithTerminal = services.find(s => s.status === 'running' && hasTerminal(s.id));
+        if (runningWithTerminal) {
+            targetId = runningWithTerminal.id;
+        } else {
+            // Priority 2: Any service that already has an open terminal
+            const anyWithTerminal = services.find(s => hasTerminal(s.id));
+            if (anyWithTerminal) {
+                targetId = anyWithTerminal.id;
+            } else {
+                targetId = null;
+            }
+        }
+    }
+
+    if (targetId !== null) {
+        setActiveTerminalId(targetId);
+        renderTerminal(targetId);
+
+        // Sync shell dropdown
+        const activeService = services.find(s => s.id === targetId);
+        const shellSelect = document.getElementById('select-terminal-shell') as HTMLSelectElement | null;
+        if (shellSelect && activeService) {
+            shellSelect.value = activeService.terminal_shell || localStorage.getItem('preferred_terminal_shell') || 'bash';
+        }
+
+        renderServices();
+        renderTerminalTabs();
+        setTimeout(() => fitTerminal(targetId), 30);
+    } else {
+        setActiveTerminalId(null);
+        hideAllTerminals();
+        const terminalOutput = document.getElementById('terminal-output');
+        if (terminalOutput && !terminalOutput.querySelector('.terminal-placeholder')) {
+            terminalOutput.innerHTML = '<div class="terminal-placeholder">No terminal selected. Click a service to open its terminal.</div>';
+        }
+        renderServices();
+        renderTerminalTabs();
+    }
 }

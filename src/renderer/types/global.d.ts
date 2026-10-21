@@ -33,8 +33,9 @@ declare global {
         delete(id: number): Promise<void>;
       };
       terminal: {
-        create(serviceId: number, workingDirectory: string): Promise<void>
+        create(serviceId: number, workingDirectory: string, shell?: string): Promise<void>
         isRunning(serviceId: number): Promise<boolean>
+        hasTerminal(serviceId: number): Promise<boolean>
         write(serviceId: number, data: string): void
         resize(serviceId: number, cols: number, rows: number): void
         onData(callback: (serviceId: number, data: string) => void): void

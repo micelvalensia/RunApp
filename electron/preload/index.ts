@@ -28,11 +28,14 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke("command::delete", id)
   },
   terminal: {
-    create: (serviceId: number, workingDirectory: string): Promise<void> =>
-      ipcRenderer.invoke("terminal:create", serviceId, workingDirectory),
+    create: (serviceId: number, workingDirectory: string, shell?: string): Promise<void> =>
+      ipcRenderer.invoke("terminal:create", serviceId, workingDirectory, shell),
 
     isRunning: (serviceId: number): Promise<boolean> =>
       ipcRenderer.invoke("terminal:isRunning", serviceId),
+
+    hasTerminal: (serviceId: number): Promise<boolean> =>
+      ipcRenderer.invoke("terminal:hasTerminal", serviceId),
 
     write: (serviceId: number, data: string): void => {
       ipcRenderer.send("terminal:write", serviceId, data);

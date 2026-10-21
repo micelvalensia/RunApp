@@ -3,13 +3,55 @@ import os from "node:os";
 import fs from "node:fs";
 import { exec } from "node:child_process";
 
-export function createTerminal(cwd: string) {
-    const shell =
-        os.platform() === "win32"
-            ? "cmd.exe"
-            : "bash";
+export function resolveShell(preferredShell?: string): { shell: string; args: string[] } {
+    const platform = os.platform();
+    const pref = (preferredShell || "").toLowerCase().trim();
 
-    return pty.spawn(shell, [], {
+    if (platform === "win32") {
+        if (pref === "bash") {
+            const gitBashPaths = [
+                "C:\\Program Files\\Git\\bin\\bash.exe",
+                "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+                `${process.env.LOCALAPPDATA}\\Programs\\Git\\bin\\bash.exe`
+            ];
+            for (const p of gitBashPaths) {
+                if (fs.existsSync(p)) return { shell: p, args: ["--login"] };
+            }
+            return { shell: "bash.exe", args: [] };
+        }
+        if (pref === "powershell") {
+            return { shell: "powershell.exe", args: [] };
+        }
+        // Default on Windows is cmd.exe
+        return { shell: process.env.COMSPEC || "cmd.exe", args: [] };
+    } else {
+        // Linux / macOS
+        if (pref === "cmd") {
+            if (fs.existsSync("/usr/bin/cmd")) {
+                return { shell: "/usr/bin/cmd", args: [] };
+            }
+            // Fallback to bash if cmd is not on this Linux machine
+            return { shell: process.env.SHELL || "bash", args: [] };
+        }
+        if (pref === "sh") {
+            return { shell: "/bin/sh", args: [] };
+        }
+        if (pref === "zsh") {
+            const zshPath = fs.existsSync("/bin/zsh") ? "/bin/zsh" : (fs.existsSync("/usr/bin/zsh") ? "/usr/bin/zsh" : "zsh");
+            return { shell: zshPath, args: [] };
+        }
+        if (pref === "powershell" || pref === "pwsh") {
+            if (fs.existsSync("/usr/bin/pwsh")) return { shell: "/usr/bin/pwsh", args: [] };
+            if (fs.existsSync("/usr/bin/powershell")) return { shell: "/usr/bin/powershell", args: [] };
+        }
+        return { shell: process.env.SHELL || "bash", args: [] };
+    }
+}
+
+export function createTerminal(cwd: string, preferredShell?: string) {
+    const { shell, args } = resolveShell(preferredShell);
+
+    return pty.spawn(shell, args, {
         name: "xterm-color",
         cols: 120,
         rows: 30,
@@ -42,9 +84,17 @@ export function hasChildProcesses(pid: number): Promise<boolean> {
             });
         } else if (platform === "win32") {
             exec(`wmic process where (ParentProcessId=${pid}) get ProcessId`, (err, stdout) => {
-                if (err) return resolve(false);
-                const lines = stdout.trim().split("\n").filter((l) => l.trim() && !l.includes("ProcessId"));
-                resolve(lines.length > 0);
+                if (!err && stdout && stdout.includes("ProcessId")) {
+                    const lines = stdout.trim().split("\n").filter((l) => l.trim() && !l.includes("ProcessId"));
+                    return resolve(lines.length > 0);
+                }
+                // Fallback for Windows 11 where WMIC is deprecated/removed
+                exec(
+                    `powershell -NoProfile -NonInteractive -Command "if (@(Get-CimInstance Win32_Process -Filter 'ParentProcessId = ${pid}').Count -gt 0) { exit 0 } else { exit 1 }"`,
+                    (psErr) => {
+                        resolve(!psErr);
+                    }
+                );
             });
         } else {
             resolve(false);

@@ -22,10 +22,12 @@ win:
 
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}
-  oneClick: true
+  oneClick: false
   perMachine: false
   allowElevation: true
-  allowToChangeInstallationDirectory: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  differentialPackage: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Runner Project
@@ -53,5 +55,6 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: true
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: micelvalensia
+  repo: RunApp

@@ -4,10 +4,13 @@ import {
     currentProject,
     services,
     activeTerminalId,
-    setServices
+    setServices,
+    getProjectActiveTerminalId,
+    setProjectActiveTerminalId
 } from './state';
 import { servicesList, escapeHtml } from './dom';
-import { switchToTerminal, renderTerminalTabs } from './terminal-manager';
+import { switchToTerminal, renderTerminalTabs, restoreProjectTerminal } from './terminal-manager';
+import { closeTerminal } from './terminal';
 import { openServiceModal, openCommandModal } from './modals';
 
 // Load services for current project
@@ -25,17 +28,21 @@ export async function loadServices(): Promise<void> {
         const loadedServices = await window.api.services.getAll(currentProject.id);
         console.log('Services loaded:', loadedServices);
 
-        // Sync running status with actual active PTY processes
+        // Clean up stale "running" status if backend PTY does not exist (e.g. app restart)
         for (const s of loadedServices) {
-            const isRunning = await window.api.terminal.isRunning(s.id);
-            if (!isRunning && s.status === 'running') {
-                s.status = 'stopped';
-                window.api.services.update(s.id, { status: 'stopped' }).catch(console.error);
+            if (s.status === 'running') {
+                const hasPTY = await window.api.terminal.hasTerminal(s.id);
+                if (!hasPTY) {
+                    s.status = 'stopped';
+                    s.running_command = null;
+                    window.api.services.update(s.id, { status: 'stopped', running_command: null }).catch(console.error);
+                }
             }
         }
 
         setServices(loadedServices);
         renderServices();
+        restoreProjectTerminal();
     } catch (error) {
         console.error('Error loading services:', error);
         servicesList.innerHTML = `
@@ -75,6 +82,8 @@ export async function renderServices(): Promise<void> {
             card.classList.add('active');
         }
 
+        const isMainRunning = service.status === 'running' && (service.running_command === 'main' || !service.running_command);
+
         card.innerHTML = `
       <div class="service-card-header">
         <div class="service-info">
@@ -92,15 +101,18 @@ export async function renderServices(): Promise<void> {
       </div>
       <div class="service-status ${service.status === 'running' ? 'running' : ''}">${service.status}</div>
       <div class="service-commands">
-        <button class="command-btn command-btn-main ${service.status === 'running' ? 'running' : ''}" data-action="run-main" data-service-id="${service.id}" title="${service.status === 'running' ? 'Stop Service' : 'Run Service'}">
-          ${service.status === 'running' ? '⏸' : '▶'} ${escapeHtml(service.executable)} ${escapeHtml(service.arguments || '')}
+        <button class="command-btn command-btn-main ${isMainRunning ? 'running' : ''}" data-action="run-main" data-service-id="${service.id}" title="${isMainRunning ? 'Stop Service' : 'Run Service'}">
+          ${isMainRunning ? '⏸' : '▶'} ${escapeHtml(service.executable)} ${escapeHtml(service.arguments || '')}
         </button>
-       ${service.commands.map((com) => `
-          <button class="command-btn" data-action="run-command" data-service-id="${service.id}" data-command-id="${com.id}" title="Run ${escapeHtml(com.executable)}">
-            ▶ ${escapeHtml(com.executable)} ${escapeHtml(com.arguments || '')}
+       ${service.commands.map((com) => {
+            const isCmdRunning = service.status === 'running' && service.running_command === String(com.id);
+            return `
+          <button class="command-btn ${isCmdRunning ? 'running' : ''}" data-action="run-command" data-service-id="${service.id}" data-command-id="${com.id}" title="${isCmdRunning ? 'Stop Command' : 'Run ' + escapeHtml(com.name || com.executable)}">
+            ${isCmdRunning ? '⏸' : '▶'} ${escapeHtml(com.executable)} ${escapeHtml(com.arguments || '')}
             <span class="x-button" data-action="delete-command" data-command-id="${com.id}" title="Delete Command">&times;</span>
           </button>
-        `).join('')
+        `;
+        }).join('')
             }
         <button class="command-btn command-btn-add" data-action="add-command" data-service-id="${service.id}">
           + Add Command
@@ -173,34 +185,65 @@ function handleEditService(serviceId: number): void {
 }
 
 async function handleToggleMainService(service: Service): Promise<void> {
-    if (service.status === 'running') {
+    const isMainRunning = service.status === 'running' && (service.running_command === 'main' || !service.running_command);
+
+    if (isMainRunning) {
         window.api.terminal.write(service.id, '\x03');
         service.status = 'stopped';
-        await window.api.services.update(service.id, { status: 'stopped' }).catch(console.error);
+        service.running_command = null;
+        await window.api.services.update(service.id, { status: 'stopped', running_command: null }).catch(console.error);
         renderServices();
         renderTerminalTabs();
         return;
     }
 
     await switchToTerminal(service.id);
+
+    // If another command is currently running on this service, stop it first
+    if (service.status === 'running') {
+        window.api.terminal.write(service.id, '\x03');
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
     const cmd = [service.executable, service.arguments].filter(Boolean).join(' ').trim();
     if (cmd) {
         window.api.terminal.write(service.id, `${cmd}\r`);
     }
     service.status = 'running';
-    await window.api.services.update(service.id, { status: 'running' }).catch(console.error);
+    service.running_command = 'main';
+    await window.api.services.update(service.id, { status: 'running', running_command: 'main' }).catch(console.error);
     renderServices();
     renderTerminalTabs();
 }
 
 async function handleRunExtraCommand(service: Service, command: Command): Promise<void> {
+    const isThisCmdRunning = service.status === 'running' && service.running_command === String(command.id);
+
+    if (isThisCmdRunning) {
+        window.api.terminal.write(service.id, '\x03');
+        service.status = 'stopped';
+        service.running_command = null;
+        await window.api.services.update(service.id, { status: 'stopped', running_command: null }).catch(console.error);
+        renderServices();
+        renderTerminalTabs();
+        return;
+    }
+
     await switchToTerminal(service.id);
+
+    // If another command is currently running on this service, stop it first
+    if (service.status === 'running') {
+        window.api.terminal.write(service.id, '\x03');
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
     const cmd = [command.executable, command.arguments].filter(Boolean).join(' ').trim();
     if (cmd) {
         window.api.terminal.write(service.id, `${cmd}\r`);
     }
     service.status = 'running';
-    await window.api.services.update(service.id, { status: 'running' }).catch(console.error);
+    service.running_command = String(command.id);
+    await window.api.services.update(service.id, { status: 'running', running_command: String(command.id) }).catch(console.error);
     renderServices();
     renderTerminalTabs();
 }
@@ -209,6 +252,10 @@ async function handleDeleteService(serviceId: number): Promise<void> {
     const service = services.find(s => s.id === serviceId);
     if (service && confirm(`Delete service "${service.name}"?`)) {
         try {
+            if (currentProject && getProjectActiveTerminalId(currentProject.id) === serviceId) {
+                setProjectActiveTerminalId(currentProject.id, null);
+            }
+            closeTerminal(serviceId);
             await window.api.services.delete(service.id);
             await loadServices();
         } catch (error) {
@@ -227,6 +274,13 @@ function handleAddCommand(serviceId: number): void {
 async function handleDeleteCommand(commandId: number): Promise<void> {
     if (commandId && confirm("Delete this command?")) {
         try {
+            const service = services.find((s) => s.running_command === String(commandId));
+            if (service) {
+                window.api.terminal.write(service.id, '\x03');
+                service.status = 'stopped';
+                service.running_command = null;
+                await window.api.services.update(service.id, { status: 'stopped', running_command: null }).catch(console.error);
+            }
             await window.api.command.delete(commandId);
             await loadServices();
         } catch (error) {

@@ -19,8 +19,24 @@ export function setServices(serviceList: Service[]): void {
     services = serviceList;
 }
 
+export const projectActiveTerminals = new Map<number, number | null>();
+
 export function setActiveTerminalId(id: number | null): void {
     activeTerminalId = id;
+    if (currentProject) {
+        projectActiveTerminals.set(currentProject.id, id);
+    }
+}
+
+export function getProjectActiveTerminalId(projectId: number): number | null {
+    return projectActiveTerminals.get(projectId) ?? null;
+}
+
+export function setProjectActiveTerminalId(projectId: number, serviceId: number | null): void {
+    projectActiveTerminals.set(projectId, serviceId);
+    if (currentProject && currentProject.id === projectId) {
+        activeTerminalId = serviceId;
+    }
 }
 
 export function getCurrentProject(): Project | null {

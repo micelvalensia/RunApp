@@ -36,8 +36,8 @@ class ServiceRepository extends BaseRepository {
     create(data: CreateServiceDto): number {
         const result = this.db.prepare(
             `
-            INSERT INTO services(name, arguments,project_id, working_directory, auto_start, executable, status)
-            VALUES (? , ?, ?, ?, ?, ?, ?)
+            INSERT INTO services(name, arguments,project_id, working_directory, auto_start, executable, status, running_command, terminal_shell)
+            VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)
             `
         ).run(
             data.name,
@@ -46,7 +46,9 @@ class ServiceRepository extends BaseRepository {
             data.working_directory,
             data.auto_start,
             data.executable,
-            data.status
+            data.status,
+            data.running_command ?? null,
+            data.terminal_shell ?? null
         )
 
         return Number(result.lastInsertRowid)
@@ -79,6 +81,14 @@ class ServiceRepository extends BaseRepository {
         if (data.status !== undefined) {
             fields.push("status = ?");
             values.push(data.status);
+        }
+        if (data.running_command !== undefined) {
+            fields.push("running_command = ?");
+            values.push(data.running_command);
+        }
+        if (data.terminal_shell !== undefined) {
+            fields.push("terminal_shell = ?");
+            values.push(data.terminal_shell);
         }
 
         if (fields.length === 0) return;

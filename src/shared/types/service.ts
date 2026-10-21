@@ -10,6 +10,8 @@ export interface Service {
   arguments: string;
   auto_start: number;
   status: string;
+  running_command?: string | null;
+  terminal_shell?: string | null;
   created_at: string;
   updated_at: string;
   commands: Command[]
@@ -23,6 +25,8 @@ export interface CreateServiceDto {
   arguments: string;
   auto_start: number;
   status: string;
+  running_command?: string | null;
+  terminal_shell?: string | null;
 }
 
 export interface UpdateServiceDto {
@@ -33,4 +37,6 @@ export interface UpdateServiceDto {
   arguments?: string;
   auto_start?: number;
   status?: string;
+  running_command?: string | null;
+  terminal_shell?: string | null;
 }
