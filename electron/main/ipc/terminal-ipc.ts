@@ -1,12 +1,13 @@
 import { ipcMain, BrowserWindow } from "electron";
 import os from "node:os";
 import fs from "node:fs";
-import { createTerminal, hasChildProcesses } from "../process/terminal.js";
+import { createTerminal, checkChildProcessesBatch, hasChildProcesses } from "../process/terminal.js";
 
 const terminals = new Map<number, ReturnType<typeof createTerminal>>();
 const activeJobStatus = new Map<number, boolean>();
-let statusCheckInterval: NodeJS.Timeout | null = null;
+let statusCheckTimeout: NodeJS.Timeout | null = null;
 let lastWebContents: Electron.WebContents | null = null;
+let isCheckingStatus = false;
 
 let isCleaningUp = false;
 
@@ -23,30 +24,56 @@ function safeSend(sender: Electron.WebContents | null, channel: string, ...args:
     }
 }
 
-function checkAllTerminalsStatus() {
-    if (isCleaningUp || terminals.size === 0 || !lastWebContents || lastWebContents.isDestroyed()) {
+async function checkAllTerminalsStatus() {
+    if (isCheckingStatus || isCleaningUp || terminals.size === 0 || !lastWebContents || lastWebContents.isDestroyed()) {
         return;
     }
 
-    terminals.forEach(async (terminal, serviceId) => {
-        try {
-            const isJobActive = await hasChildProcesses(terminal.pid);
+    isCheckingStatus = true;
+    try {
+        const terminalEntries = Array.from(terminals.entries());
+        const pids = terminalEntries.map(([_, term]) => term.pid);
+        const childStatusMap = await checkChildProcessesBatch(pids);
+
+        for (const [serviceId, terminal] of terminalEntries) {
+            const isJobActive = childStatusMap.get(terminal.pid) ?? false;
             const prevStatus = activeJobStatus.get(serviceId);
 
             if (prevStatus !== isJobActive) {
                 activeJobStatus.set(serviceId, isJobActive);
                 safeSend(lastWebContents, "terminal:status-change", serviceId, isJobActive ? "running" : "stopped");
             }
-        } catch (err) {
-            console.error(`Error checking status for service ${serviceId}:`, err);
         }
-    });
+    } catch (err) {
+        console.error("Error checking terminal statuses:", err);
+    } finally {
+        isCheckingStatus = false;
+    }
+}
+
+function scheduleNextStatusCheck(delayMs = 2000) {
+    if (isCleaningUp || terminals.size === 0 || !lastWebContents || lastWebContents.isDestroyed()) {
+        return;
+    }
+
+    if (statusCheckTimeout) {
+        clearTimeout(statusCheckTimeout);
+        statusCheckTimeout = null;
+    }
+
+    statusCheckTimeout = setTimeout(async () => {
+        await checkAllTerminalsStatus();
+        if (!isCleaningUp && terminals.size > 0) {
+            const anyActive = Array.from(activeJobStatus.values()).some(Boolean);
+            scheduleNextStatusCheck(anyActive ? 1500 : 3000);
+        }
+    }, delayMs);
 }
 
 function startStatusMonitoring(webContents: Electron.WebContents) {
     lastWebContents = webContents;
-    if (!statusCheckInterval) {
-        statusCheckInterval = setInterval(checkAllTerminalsStatus, 700);
+    if (!statusCheckTimeout) {
+        scheduleNextStatusCheck(500);
     }
 }
 
@@ -74,6 +101,10 @@ export function registerTerminalIPC() {
             terminal.onExit(({ exitCode }) => {
                 terminals.delete(serviceId);
                 activeJobStatus.delete(serviceId);
+                if (terminals.size === 0 && statusCheckTimeout) {
+                    clearTimeout(statusCheckTimeout);
+                    statusCheckTimeout = null;
+                }
                 if (isCleaningUp) return;
                 safeSend(event.sender, "terminal:exit", serviceId, exitCode);
                 safeSend(event.sender, "terminal:status-change", serviceId, "stopped");
@@ -113,7 +144,9 @@ export function registerTerminalIPC() {
 
                 // If Ctrl+C is sent, perform a quick status check
                 if (data.includes("\x03")) {
-                    setTimeout(checkAllTerminalsStatus, 150);
+                    scheduleNextStatusCheck(150);
+                } else if (data.includes("\r") || data.includes("\n")) {
+                    scheduleNextStatusCheck(600);
                 }
             }
         }
@@ -146,6 +179,10 @@ export function registerTerminalIPC() {
                 }
                 terminals.delete(serviceId);
                 activeJobStatus.delete(serviceId);
+                if (terminals.size === 0 && statusCheckTimeout) {
+                    clearTimeout(statusCheckTimeout);
+                    statusCheckTimeout = null;
+                }
             }
         }
     );
@@ -156,9 +193,9 @@ export function cleanupAllTerminals() {
     if (isCleaningUp) return;
     isCleaningUp = true;
 
-    if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
-        statusCheckInterval = null;
+    if (statusCheckTimeout) {
+        clearTimeout(statusCheckTimeout);
+        statusCheckTimeout = null;
     }
     lastWebContents = null;
 

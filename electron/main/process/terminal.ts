@@ -60,44 +60,125 @@ export function createTerminal(cwd: string, preferredShell?: string) {
     });
 }
 
-export function hasChildProcesses(pid: number): Promise<boolean> {
+let wmicAvailable: boolean | null = null;
+
+export function checkChildProcessesBatch(pids: number[]): Promise<Map<number, boolean>> {
     return new Promise((resolve) => {
-        if (!pid) return resolve(false);
+        const resultMap = new Map<number, boolean>();
+        const validPids = pids.filter((p) => typeof p === "number" && p > 0);
+
+        if (validPids.length === 0) {
+            return resolve(resultMap);
+        }
 
         const platform = os.platform();
+
         if (platform === "linux") {
-            try {
-                const childrenPath = `/proc/${pid}/task/${pid}/children`;
-                if (fs.existsSync(childrenPath)) {
-                    const content = fs.readFileSync(childrenPath, "utf8").trim();
-                    return resolve(content.length > 0);
+            const remainingPids: number[] = [];
+
+            for (const pid of validPids) {
+                try {
+                    const childrenPath = `/proc/${pid}/task/${pid}/children`;
+                    if (fs.existsSync(childrenPath)) {
+                        const content = fs.readFileSync(childrenPath, "utf8").trim();
+                        resultMap.set(pid, content.length > 0);
+                        continue;
+                    }
+                } catch {
+                    // fallback to pgrep
                 }
-            } catch {
-                // fallback to pgrep
+                remainingPids.push(pid);
             }
-            exec(`pgrep -P ${pid}`, (err, stdout) => {
-                resolve(!err && stdout.trim().length > 0);
-            });
+
+            if (remainingPids.length === 0) {
+                return resolve(resultMap);
+            }
+
+            let pending = remainingPids.length;
+            for (const pid of remainingPids) {
+                exec(`pgrep -P ${pid}`, (err, stdout) => {
+                    resultMap.set(pid, !err && stdout.trim().length > 0);
+                    pending--;
+                    if (pending === 0) resolve(resultMap);
+                });
+            }
         } else if (platform === "darwin") {
-            exec(`pgrep -P ${pid}`, (err, stdout) => {
-                resolve(!err && stdout.trim().length > 0);
-            });
+            let pending = validPids.length;
+            for (const pid of validPids) {
+                exec(`pgrep -P ${pid}`, (err, stdout) => {
+                    resultMap.set(pid, !err && stdout.trim().length > 0);
+                    pending--;
+                    if (pending === 0) resolve(resultMap);
+                });
+            }
         } else if (platform === "win32") {
-            exec(`wmic process where (ParentProcessId=${pid}) get ProcessId`, (err, stdout) => {
-                if (!err && stdout && stdout.includes("ProcessId")) {
-                    const lines = stdout.trim().split("\n").filter((l) => l.trim() && !l.includes("ProcessId"));
-                    return resolve(lines.length > 0);
-                }
-                // Fallback for Windows 11 where WMIC is deprecated/removed
+            const queryViaPowershell = () => {
+                const filterParts = validPids.map((pid) => `ParentProcessId = ${pid}`).join(" or ");
+                const psCommand = `powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "@(Get-CimInstance Win32_Process -Filter '${filterParts}').ParentProcessId"`;
+
+                exec(psCommand, { windowsHide: true }, (err, stdout) => {
+                    if (err || !stdout) {
+                        for (const pid of validPids) {
+                            resultMap.set(pid, false);
+                        }
+                        return resolve(resultMap);
+                    }
+
+                    const activeParents = new Set(
+                        stdout
+                            .split(/\r?\n/)
+                            .map((line) => parseInt(line.trim(), 10))
+                            .filter((n) => !isNaN(n) && n > 0)
+                    );
+
+                    for (const pid of validPids) {
+                        resultMap.set(pid, activeParents.has(pid));
+                    }
+                    resolve(resultMap);
+                });
+            };
+
+            if (wmicAvailable === false) {
+                queryViaPowershell();
+            } else {
+                const wmicFilter = validPids.map((pid) => `ParentProcessId=${pid}`).join(" or ");
                 exec(
-                    `powershell -NoProfile -NonInteractive -Command "if (@(Get-CimInstance Win32_Process -Filter 'ParentProcessId = ${pid}').Count -gt 0) { exit 0 } else { exit 1 }"`,
-                    (psErr) => {
-                        resolve(!psErr);
+                    `wmic process where (${wmicFilter}) get ParentProcessId,ProcessId`,
+                    { windowsHide: true },
+                    (err, stdout) => {
+                        if (!err && stdout && stdout.includes("ProcessId")) {
+                            wmicAvailable = true;
+                            const lines = stdout.trim().split("\n").filter((l) => l.trim() && !l.includes("ProcessId") && !l.includes("ParentProcessId"));
+                            const activeParents = new Set<number>();
+                            for (const line of lines) {
+                                const parts = line.trim().split(/\s+/).map((n) => parseInt(n, 10)).filter((n) => !isNaN(n));
+                                if (parts.length >= 1) {
+                                    activeParents.add(parts[0]);
+                                }
+                            }
+                            for (const pid of validPids) {
+                                resultMap.set(pid, activeParents.has(pid));
+                            }
+                            return resolve(resultMap);
+                        }
+
+                        // WMIC failed (e.g. Windows 11 where WMIC is deprecated/removed)
+                        wmicAvailable = false;
+                        queryViaPowershell();
                     }
                 );
-            });
+            }
         } else {
-            resolve(false);
+            for (const pid of validPids) {
+                resultMap.set(pid, false);
+            }
+            resolve(resultMap);
         }
     });
+}
+
+export async function hasChildProcesses(pid: number): Promise<boolean> {
+    if (!pid || pid <= 0) return false;
+    const batch = await checkChildProcessesBatch([pid]);
+    return batch.get(pid) ?? false;
 }
