@@ -28,11 +28,11 @@ export async function loadServices(): Promise<void> {
         const loadedServices = await window.api.services.getAll(currentProject.id);
         console.log('Services loaded:', loadedServices);
 
-        // Clean up stale "running" status if backend PTY does not exist (e.g. app restart)
+        // Clean up stale "running" status if backend PTY does not exist (e.g. app restart) or running_command is missing
         for (const s of loadedServices) {
             if (s.status === 'running') {
                 const hasPTY = await window.api.terminal.hasTerminal(s.id);
-                if (!hasPTY) {
+                if (!hasPTY || !s.running_command) {
                     s.status = 'stopped';
                     s.running_command = null;
                     window.api.services.update(s.id, { status: 'stopped', running_command: null }).catch(console.error);
@@ -82,7 +82,7 @@ export async function renderServices(): Promise<void> {
             card.classList.add('active');
         }
 
-        const isMainRunning = service.status === 'running' && (service.running_command === 'main' || !service.running_command);
+        const isMainRunning = service.status === 'running' && service.running_command === 'main';
 
         card.innerHTML = `
       <div class="service-card-header">
@@ -185,7 +185,7 @@ function handleEditService(serviceId: number): void {
 }
 
 async function handleToggleMainService(service: Service): Promise<void> {
-    const isMainRunning = service.status === 'running' && (service.running_command === 'main' || !service.running_command);
+    const isMainRunning = service.status === 'running' && service.running_command === 'main';
 
     if (isMainRunning) {
         window.api.terminal.write(service.id, '\x03');

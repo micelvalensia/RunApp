@@ -1,5 +1,5 @@
 import { currentProject, services, activeTerminalId, setActiveTerminalId, getProjectActiveTerminalId } from './state';
-import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds, fitTerminal, hideAllTerminals } from './terminal';
+import { renderTerminal, closeTerminal, hasTerminal, getActiveTerminalIds, fitTerminal, showPlaceholder } from './terminal';
 import { renderServices } from './services';
 import { escapeHtml } from './dom';
 
@@ -18,20 +18,15 @@ window.api.terminal.onExit((serviceId: number) => {
 
 // Setup listener untuk status perubahan child process (e.g. Ctrl+C atau program selesai)
 window.api.terminal.onStatusChange((serviceId: number, status: 'running' | 'stopped') => {
-    const service = services.find(s => s.id === serviceId);
-    if (service && service.status !== status) {
-        service.status = status;
-        if (status === 'stopped') {
-            service.running_command = null;
-        }
-        renderServices();
-        renderTerminalTabs();
-    }
-    // Update DB regardless of which project is open
     if (status === 'stopped') {
+        const service = services.find(s => s.id === serviceId);
+        if (service && service.status === 'running') {
+            service.status = 'stopped';
+            service.running_command = null;
+            renderServices();
+            renderTerminalTabs();
+        }
         window.api.services.update(serviceId, { status: 'stopped', running_command: null }).catch(console.error);
-    } else {
-        window.api.services.update(serviceId, { status: 'running' }).catch(console.error);
     }
 });
 
@@ -134,11 +129,7 @@ export function handleCloseTerminal(serviceId: number): void {
         if (nextId) {
             switchToTerminal(nextId);
         } else {
-            hideAllTerminals();
-            const terminalOutput = document.getElementById('terminal-output');
-            if (terminalOutput) {
-                terminalOutput.innerHTML = '<div class="terminal-placeholder">No terminal selected. Click a service to open its terminal.</div>';
-            }
+            showPlaceholder();
         }
     }
 
@@ -187,11 +178,7 @@ export function restoreProjectTerminal(): void {
         setTimeout(() => fitTerminal(targetId), 30);
     } else {
         setActiveTerminalId(null);
-        hideAllTerminals();
-        const terminalOutput = document.getElementById('terminal-output');
-        if (terminalOutput && !terminalOutput.querySelector('.terminal-placeholder')) {
-            terminalOutput.innerHTML = '<div class="terminal-placeholder">No terminal selected. Click a service to open its terminal.</div>';
-        }
+        showPlaceholder();
         renderServices();
         renderTerminalTabs();
     }

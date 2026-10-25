@@ -71,6 +71,32 @@ export function hideAllTerminals(): void {
     });
 }
 
+export function showPlaceholder(message = 'No terminal selected. Click a service to open its terminal.'): void {
+    const output = document.getElementById('terminal-output');
+    if (!output) return;
+
+    hideAllTerminals();
+
+    let placeholder = output.querySelector<HTMLElement>('.terminal-placeholder');
+    if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'terminal-placeholder';
+        output.appendChild(placeholder);
+    }
+    placeholder.textContent = message;
+    placeholder.style.display = 'block';
+}
+
+export function hidePlaceholder(): void {
+    const output = document.getElementById('terminal-output');
+    if (!output) return;
+
+    const placeholder = output.querySelector<HTMLElement>('.terminal-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
+}
+
 /**
  * Render/tampilkan terminal untuk service tertentu
  */
@@ -79,12 +105,7 @@ export function renderTerminal(serviceId: number): void {
     if (!output) return;
 
     initResizeObserver();
-
-    // Hapus placeholder jika ada
-    const placeholder = output.querySelector(".terminal-placeholder");
-    if (placeholder) {
-        placeholder.remove();
-    }
+    hidePlaceholder();
 
     // Hide semua terminal container
     terminalContainers.forEach((container) => {
@@ -101,8 +122,11 @@ export function renderTerminal(serviceId: number): void {
         terminalContainer.style.width = "100%";
         terminalContainer.style.height = "100%";
 
-        output.appendChild(terminalContainer);
         terminalContainers.set(serviceId, terminalContainer);
+    }
+
+    if (terminalContainer.parentElement !== output) {
+        output.appendChild(terminalContainer);
     }
 
     // Tampilkan container service ini
@@ -140,11 +164,12 @@ export function renderTerminal(serviceId: number): void {
         xtermInstances.set(serviceId, terminal);
     }
 
-    // Fit & focus
-    setTimeout(() => {
+    // Fit, refresh & focus
+    requestAnimationFrame(() => {
         fitTerminal(serviceId);
+        terminal?.refresh(0, terminal.rows - 1);
         terminal?.focus();
-    }, 20);
+    });
 }
 
 /**

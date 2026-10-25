@@ -114,7 +114,7 @@ export function checkChildProcessesBatch(pids: number[]): Promise<Map<number, bo
         } else if (platform === "win32") {
             const queryViaPowershell = () => {
                 const filterParts = validPids.map((pid) => `ParentProcessId = ${pid}`).join(" or ");
-                const psCommand = `powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "@(Get-CimInstance Win32_Process -Filter '${filterParts}').ParentProcessId"`;
+                const psCommand = `powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "@(Get-CimInstance Win32_Process -Filter '(${filterParts}) and Name != ''conhost.exe'' and Name != ''openconsole.exe''').ParentProcessId"`;
 
                 exec(psCommand, { windowsHide: true }, (err, stdout) => {
                     if (err || !stdout) {
@@ -143,7 +143,7 @@ export function checkChildProcessesBatch(pids: number[]): Promise<Map<number, bo
             } else {
                 const wmicFilter = validPids.map((pid) => `ParentProcessId=${pid}`).join(" or ");
                 exec(
-                    `wmic process where (${wmicFilter}) get ParentProcessId,ProcessId`,
+                    `wmic process where ((${wmicFilter}) and Name!='conhost.exe' and Name!='openconsole.exe') get ParentProcessId,ProcessId`,
                     { windowsHide: true },
                     (err, stdout) => {
                         if (!err && stdout && stdout.includes("ProcessId")) {

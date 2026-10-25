@@ -81,8 +81,6 @@ export function registerTerminalIPC() {
     ipcMain.handle(
         "terminal:create",
         (event, serviceId: number, workingDirectory: string, shell?: string) => {
-            startStatusMonitoring(event.sender);
-
             // Jangan buat PTY baru jika sudah ada
             if (terminals.has(serviceId)) {
                 return;
